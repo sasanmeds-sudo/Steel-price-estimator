@@ -1,125 +1,109 @@
-import sys
+import streamlit as st
+import pandas as pd
 
-def get_valid_float(prompt):
-    """
-    Helper to get a valid float input.
-    Returns 0.0 if user just presses Enter.
-    """
-    while True:
-        user_input = input(prompt)
-        if user_input.strip() == "":
-            return 0.0
-        try:
-            val = float(user_input)
-            if val < 0:
-                print("    -> Please enter a positive number.")
-                continue
-            return val
-        except ValueError:
-            print("    -> Invalid input. Please enter a number.")
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Steel Price Estimator", layout="centered")
 
-def get_category_selection():
-    """
-    Displays the numbered list of categories and returns the selected range.
-    """
-    # Format: ID: (Name, Min_Multiplier, Max_Multiplier)
-    categories = {
-        1: ("Alloyed Constructional Steel", 2.0, 2.6),
-        2: ("Stainless Steel", 2.5, 3.5),
-        3: ("Alloyed Heat Resistant Steel", 3.0, 4.5),
-        4: ("Alloyed Tool Steel", 3.5, 5.5),
-        5: ("High Speed Steels (HSS)", 6.0, 9.0)
-    }
+# --- PRICES (USD/kg) - Feb 2026 ---
+PRICES = {
+    'Carbon (C)':       0.15,
+    'Silicon (Si)':     1.50,
+    'Manganese (Mn)':   1.40,
+    'Chromium (Cr)':    3.00,
+    'Nickel (Ni)':      16.80,
+    'Molybdenum (Mo)':  48.00,
+    'Vanadium (V)':     32.50,
+    'Tungsten (W)':     42.00,
+    'Cobalt (Co)':      31.00,
+    'Copper (Cu)':      9.20,
+    'Aluminum (Al)':    2.40,
+    'Niobium (Nb)':     45.00
+}
+BASE_IRON_PRICE = 0.55
 
-    print("\n--- SELECT STEEL CATEGORY ---")
-    for key, (name, min_m, max_m) in categories.items():
-        print(f"  [{key}] {name} (Multiplier: {min_m}x - {max_m}x)")
-    
-    while True:
-        try:
-            choice = input("\nEnter Category Number (1-5): ")
-            choice_int = int(choice)
-            if choice_int in categories:
-                return categories[choice_int]
-            else:
-                print("    -> Invalid selection. Choose 1-5.")
-        except ValueError:
-            print("    -> Please enter a whole number.")
+# --- CATEGORIES ---
+CATEGORIES = {
+    "1. Alloyed Constructional Steel": (2.0, 2.6),
+    "2. Stainless Steel":              (2.5, 3.5),
+    "3. Alloyed Heat Resistant Steel": (3.0, 4.5),
+    "4. Alloyed Tool Steel":           (3.5, 5.5),
+    "5. High Speed Steels (HSS)":      (6.0, 9.0)
+}
 
-def calculate_steel_price_range():
-    # --- 1. MARKET PRICES (USD/kg) - Feb 2026 Estimates ---
-    PRICES = {
-        'Carbon (C)':       0.15,
-        'Silicon (Si)':     1.50,
-        'Manganese (Mn)':   1.40,
-        'Chromium (Cr)':    3.00,
-        'Nickel (Ni)':      16.80,
-        'Molybdenum (Mo)':  48.00,
-        'Vanadium (V)':     32.50,
-        'Tungsten (W)':     42.00,
-        'Cobalt (Co)':      31.00,
-        'Copper (Cu)':      9.20,
-        'Aluminum (Al)':    2.40,
-        'Niobium (Nb)':     45.00
-    }
-    BASE_IRON_PRICE = 0.55
+# --- APP UI ---
+st.title("🏭 Steel Retail Price Estimator")
+st.markdown("Calculate **Raw Material Cost** and estimated **Retail Price Range**.")
 
-    print("\n==============================================")
-    print("   STEEL RETAIL PRICE RANGE ESTIMATOR")
-    print("==============================================")
-    
-    # 1. Get Name
-    steel_name = input("Enter Steel Grade Name (e.g. 1.2714): ")
-    
-    # 2. Get Category immediately (as requested)
-    cat_name, min_mult, max_mult = get_category_selection()
-    
-    # 3. Get Composition
-    print(f"\n--- Enter Composition for {steel_name} ---")
-    print("(Press [Enter] if element is 0%)")
-    
-    total_alloy_cost = 0.0
-    total_percent = 0.0
-    
-    for element, price in PRICES.items():
-        pct = get_valid_float(f"  % {element}: ")
-        if pct > 0:
-            total_alloy_cost += (pct / 100.0) * price
-            total_percent += pct
+# 1. Inputs
+col1, col2 = st.columns([2, 2])
+with col1:
+    steel_name = st.text_input("Steel Grade Name", placeholder="e.g. 1.2714")
+with col2:
+    cat_selection = st.selectbox("Select Steel Category", options=list(CATEGORIES.keys()))
 
-    # 4. Calculate Iron Balance
-    iron_percent = 100.0 - total_percent
-    
-    if iron_percent < 0:
-        print(f"\n[!] ERROR: Total percentage is {total_percent}%. Max is 100%.")
-        return
+# Get multipliers based on selection
+min_mult, max_mult = CATEGORIES[cat_selection]
 
-    iron_cost = (iron_percent / 100.0) * BASE_IRON_PRICE
-    
-    # 5. Final Calculations
-    raw_material_cost = total_alloy_cost + iron_cost
-    
-    # Apply Range Multipliers
-    min_retail = raw_material_cost * min_mult
-    max_retail = raw_material_cost * max_mult
+st.divider()
 
-    # 6. Output Report
-    print("\n" + "="*50)
-    print(f"REPORT: {steel_name.upper()}")
-    print(f"Category: {cat_name}")
-    print("="*50)
-    
-    print(f"{'Cost Component':<25} | {'Value (USD/kg)'}")
-    print("-" * 50)
-    print(f"{'Raw Alloys + Iron Cost':<25} | ${raw_material_cost:.2f}")
-    print("-" * 50)
-    print(f"Retail Multiplier Applied     | {min_mult}x  to  {max_mult}x")
-    print("-" * 50)
-    
-    print("\n>>> ESTIMATED RETAIL PRICE RANGE <<<")
-    print(f"PER KG:    ${min_retail:.2f}  -  ${max_retail:.2f}")
-    print(f"PER TONNE: ${min_retail * 1000:,.0f}  -  ${max_retail * 1000:,.0f}")
-    print("="*50)
+# 2. Composition Inputs
+st.subheader("Chemical Composition (%)")
+st.caption("Enter the percentage for each element. Iron (Fe) is calculated automatically.")
 
-if __name__ == "__main__":
-    calculate_steel_price_range()
+# Create 3 columns for inputs to make it look like an app
+c1, c2, c3 = st.columns(3)
+input_cols = [c1, c2, c3]
+
+elements_inputs = {}
+i = 0
+for element, price in PRICES.items():
+    # Rotate through columns
+    with input_cols[i % 3]:
+        val = st.number_input(f"{element}", min_value=0.0, max_value=100.0, step=0.1, format="%.2f")
+        elements_inputs[element] = val
+    i += 1
+
+# --- CALCULATIONS ---
+total_percent = sum(elements_inputs.values())
+iron_percent = 100.0 - total_percent
+
+# Calculate Costs
+total_alloy_cost = sum((pct/100) * PRICES[el] for el, pct in elements_inputs.items())
+
+if iron_percent < 0:
+    st.error(f"⚠️ Total percentage is {total_percent:.2f}%! (Must be ≤ 100)")
+else:
+    iron_cost = (iron_percent / 100) * BASE_IRON_PRICE
+    raw_cost_kg = total_alloy_cost + iron_cost
+    
+    # Retail Range
+    retail_min = raw_cost_kg * min_mult
+    retail_max = raw_cost_kg * max_mult
+
+    # --- DISPLAY RESULTS ---
+    st.divider()
+    st.header(f"Results for: {steel_name if steel_name else 'Custom Grade'}")
+
+    # Metrics Row
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Iron Balance", f"{iron_percent:.2f}%")
+    m2.metric("Raw Melt Cost", f"${raw_cost_kg:.2f} /kg")
+    m3.metric("Multiplier", f"{min_mult}x - {max_mult}x")
+
+    # Big Price Display
+    st.success(f"### 💰 Estimated Retail Price:  ${retail_min:.2f}  —  ${retail_max:.2f} / kg")
+    st.caption(f"Per Tonne: ${retail_min*1000:,.0f} - ${retail_max*1000:,.0f}")
+
+    # Cost Breakdown Chart
+    st.subheader("Cost Drivers")
+    
+    # Prepare data for chart
+    chart_data = {k: (v/100)*PRICES[k] for k, v in elements_inputs.items() if v > 0}
+    chart_data['Iron'] = iron_cost
+    
+    df = pd.DataFrame(list(chart_data.items()), columns=['Element', 'Cost Contribution ($)'])
+    st.bar_chart(df.set_index('Element'))
+
+    # Detailed Table inside an expander
+    with st.expander("See Detailed Cost Breakdown"):
+        st.table(df)
