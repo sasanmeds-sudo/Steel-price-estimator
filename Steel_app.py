@@ -23,11 +23,11 @@ BASE_IRON_PRICE = 0.55
 
 # --- CATEGORIES ---
 CATEGORIES = {
-    "1. Alloyed Constructional Steel": (2.0, 2.6),
-    "2. Stainless Steel":              (2.5, 3.5),
-    "3. Alloyed Heat Resistant Steel": (3.0, 4.5),
-    "4. Alloyed Tool Steel":           (3.5, 5.5),
-    "5. High Speed Steels (HSS)":      (6.0, 9.0)
+    "1. Alloyed Constructional Steel": (2.5, 4.0),
+    "2. Stainless Steel":              (3.0, 5.0),
+    "3. Alloyed Heat Resistant Steel": (3.0, 6.0),
+    "4. Alloyed Tool Steel":           (3.5, 6.5),
+    "5. High Speed Steels (HSS)":      (5.5, 10.0)
 }
 
 # --- APP UI ---
